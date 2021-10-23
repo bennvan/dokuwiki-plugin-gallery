@@ -5,11 +5,12 @@
  * @author Dmitry Baikov <dsbaikov@gmail.com>
  */
 
-$conf['thumbnail_width']  = 120;
-$conf['thumbnail_height'] = 120;
-$conf['image_width']      = 800;
-$conf['image_height']     = 600;
+$conf['thumbnail_width']  = 80;
+$conf['thumbnail_height'] = 80;
+$conf['image_width']      = 1080;
+$conf['image_height']     = 720;
 $conf['cols']             = 5;
-
 $conf['sort'] = 'file';
-$conf['options'] = 'cache';
+$conf['options'] = 'cache,direct';
+$conf['jsViewer'] = 'glightbox';
+$conf['jsViewerAll'] = 1;

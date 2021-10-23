@@ -73,25 +73,26 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         }
 
         // set the defaults
-        $data['tw']       = $this->getConf('thumbnail_width');
-        $data['th']       = $this->getConf('thumbnail_height');
-        $data['iw']       = $this->getConf('image_width');
-        $data['ih']       = $this->getConf('image_height');
-        $data['cols']     = $this->getConf('cols');
-        $data['filter']   = '';
-        $data['lightbox'] = false;
-        $data['direct']   = false;
-        $data['showname'] = false;
-        $data['showtitle'] = false;
-        $data['reverse']  = false;
-        $data['random']   = false;
-        $data['cache']    = true;
-        $data['crop']     = false;
-        $data['recursive']= true;
-        $data['sort']     = $this->getConf('sort');
-        $data['limit']    = 0;
-        $data['offset']   = 0;
-        $data['paginate'] = 0;
+        $data['tw']          = $this->getConf('thumbnail_width');
+        $data['th']          = $this->getConf('thumbnail_height');
+        $data['iw']          = $this->getConf('image_width');
+        $data['ih']          = $this->getConf('image_height');
+        $data['cols']        = $this->getConf('cols');
+        $data['filter']      = '';
+        $data['jsviewer']    = $this->getConf('jsViewer');
+        $data['jsviewerall'] = $this->getConf('jsViewerAll');
+        $data['direct']      = false;
+        $data['showname']    = false;
+        $data['showtitle']   = false;
+        $data['reverse']     = false;
+        $data['random']      = false;
+        $data['cache']       = true;
+        $data['crop']        = false;
+        $data['recursive']   = false;
+        $data['sort']        = $this->getConf('sort');
+        $data['limit']       = 0;
+        $data['offset']      = 0;
+        $data['paginate']    = 0;
 
         // parse additional options
         $params = $this->getConf('options').','.$params;
@@ -135,7 +136,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         }
 
         // implicit direct linking?
-        if($data['lightbox']) $data['direct']   = true;
+        if($data['jsviewer'] !== 'none') $data['direct'] = true;
 
 
         return $data;
@@ -148,14 +149,14 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         global $ID;
         if($mode == 'xhtml'){
             $R->info['cache'] &= $data['cache'];
-            $R->doc .= $this->_gallery($data);
+            $R->doc .= $this->_glgallery($data);
             return true;
         }elseif($mode == 'metadata'){
-            $rel = p_get_metadata($ID,'relation',METADATA_RENDER_USING_CACHE);
-            $img = $rel['firstimage'];
-            if(empty($img)){
-                $files = $this->_findimages($data);
-                if(count($files)) $R->internalmedia($files[0]['id']);
+            $files = $this->_findimages($data);
+            if (count($files)) {
+                foreach($files as $img) {
+                    $R->internalmedia($img['id']);
+                }
             }
             return true;
         }
@@ -329,6 +330,58 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
     }
 
 
+
+    /**
+     * Rendering for glightbox gallery
+     */
+    function _glgallery($data){
+        global $conf;
+        global $lang;
+
+        // prepare alignment
+        $align = '';
+        if($data['align'] == 1){
+            $align  = 'glgallery-right';
+        }
+        if($data['align'] == 2){
+            $align  = 'glgallery-left';
+        }
+        if($data['align'] == 3){
+            $align  = 'glgallery-center';
+        }
+
+        $ret = '';
+
+        $files = $this->_findimages($data);
+
+        if (!count($files)){
+            $ret .= '<div class="glgallery-nothing">'.$this->getLang('nothingfound').'</div>';
+            return $ret;
+        }
+       $img = $files[array_key_first($files)];
+
+        $ret .= '<div class="glgallery '.$align.'" data-gallery="'.$data['galid'].'">';
+        $ret .= '<a href="#" class="glgallery-main-img">';
+        $ret .= '<img class="media" src="'.ml($img['id']).'" '.$iatt.' />';
+        $ret .= '</a>';
+        $ret .= '<div class="glgallery-row">';
+
+        $first = true;
+        foreach($files as $img){
+            if ($first) {
+                $first=false;
+                $ret .= '<div class="glgallery-row-img glgallery-row-img-active">';
+            } else {
+                $ret .= '<div class="glgallery-row-img">';
+            }
+            $ret .= $this->_glimage($img,$data);
+            $ret .= '</div>';
+        }
+        $ret .= '</div></div>';
+        return $ret;
+    }
+
+
     /**
      * Does the gallery formatting
      */
@@ -483,6 +536,76 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         }
 
         return '<div class="gallery'.$align.'"'.$xalign.'>'.$pgret.$ret.'<div class="clearer"></div></div>';
+    }
+
+    function _glimage(&$img, $data){
+        global $ID;
+
+        // calculate thumbnail size
+        if(!$data['crop']){
+            $w = (int) $this->_meta($img,'width');
+            $h = (int) $this->_meta($img,'height');
+            if($w && $h){
+                $dim = array();
+                if($w > $data['tw'] || $h > $data['th']){
+                    $ratio = $this->_ratio($img,$data['tw'],$data['th']);
+                    $w = floor($w * $ratio);
+                    $h = floor($h * $ratio);
+                    $dim = array('w'=>$w,'h'=>$h);
+                }
+            }else{
+                $data['crop'] = true; // no size info -> always crop
+            }
+        }
+        if($data['crop']){
+            $w = $data['tw'];
+            $h = $data['th'];
+            $dim = array('w'=>$w,'h'=>$h);
+        }
+
+        //prepare img attributes
+        $i             = array();
+        $i['width']    = $w;
+        $i['height']   = $h;
+        $i['border']   = 0;
+        $i['alt']      = $this->_meta($img,'title');
+        $i['class']    = 'media tn';
+        $iatt = buildAttributes($i);
+        $src  = ml($img['id'],$dim);
+
+        // prepare lightbox dimensions
+        $w_lightbox = (int) $this->_meta($img,'width');
+        $h_lightbox = (int) $this->_meta($img,'height');
+        $dim_lightbox = array();
+        if($w_lightbox > $data['iw'] || $h_lightbox > $data['ih']){
+            $ratio = $this->_ratio($img,$data['iw'],$data['ih']);
+            $w_lightbox = floor($w_lightbox * $ratio);
+            $h_lightbox = floor($h_lightbox * $ratio);
+            $dim_lightbox = array('w'=>$w_lightbox,'h'=>$h_lightbox);
+        }
+
+        //prepare link attributes
+        $a           = array();
+        // $a['title']  = $this->_meta($img,'title');
+        $a['data-description'] = trim(str_replace("\n",' ',$this->_meta($img,'desc')));
+        if(!$a['data-description']) unset($a['data-description']);
+        if($data['jsviewer'] === 'glightbox'){
+            $href   = ml($img['id'],$dim_lightbox);
+            $a['class'] = 'glightbox_'.$data['galid'];
+            $a['data-gallery']  =  $data['galid']; //unique ID from the gallery
+        }elseif($img['detail'] && !$data['direct']){
+            $href   = $img['detail'];
+        }else{
+            $href   = ml($img['id'],array('id'=>$ID),$data['direct']);
+        }
+        $aatt = buildAttributes($a);
+
+        // prepare output
+        $ret  = '';
+        $ret .= '<a href="'.$href.'" '.$aatt.'>';
+        $ret .= '<img src="'.$src.'" '.$iatt.' />';
+        $ret .= '</a>';
+        return $ret;
     }
 
     /**

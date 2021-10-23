@@ -19,4 +19,5 @@ $lang['sort_o_date']  = 'sort by EXIF date';
 $lang['sort_o_title'] = 'sort by EXIF title';
 
 $lang['options'] = 'Additional gallery default options';
-
+$lang['jsViewer'] = 'JS library/viewer to display images';
+$lang['jsViewerAll'] = 'Use selected <code>jsViewer</code> for all wiki images with a direct link';

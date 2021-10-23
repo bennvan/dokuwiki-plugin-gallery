@@ -1,7 +1,7 @@
 base   gallery
-author Andreas Gohr
-email  andi@splitbrain.org
+author Ben van Magill, Andreas Gohr
+email  ben.vanmagill16@gmail.com
 date   2021-09-11
-name   Gallery Plugin
+name   Glightbox Plugin
 desc   Creates a gallery of images from a namespace or RSS/ATOM feed
-url    http://www.dokuwiki.org/plugin:gallery
+url    https://github.com/bennvan/dokuwiki-plugin-gallery

@@ -67,12 +67,14 @@
                         e.stopPropagation();
                         e.preventDefault();            
                     };           
-                }, true);
+                },true);
             });
         });
 
     }
     
+    var jsviewer = JSINFO && JSINFO.plugin_gallery && JSINFO.plugin_gallery.jsviewer;
+    if (!jsviewer) return;
     if (JSINFO.plugin_gallery.jsviewer !== 'glightbox') return;
     if (JSINFO.plugin_gallery.jsviewerall) {
         select_all_images();

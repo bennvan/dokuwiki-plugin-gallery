@@ -22,6 +22,8 @@
             if (!hasValidImg(link)) continue;
             // Add the lightbox
             link.classList.add('glightbox','glightbox'+i);
+            // Dont show the image path as the title/description.
+            link.setAttribute('data-glightbox', 'title:; description:;');
             // if its a caption.
             next = link.nextElementSibling;
             if (!next) continue;

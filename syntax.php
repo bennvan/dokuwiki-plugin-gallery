@@ -361,7 +361,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
        $img = $files[array_key_first($files)];
 
         $ret .= '<div class="glgallery '.$align.'" data-gallery="'.$data['galid'].'">';
-        $ret .= '<a href="#" class="glgallery-main-img">';
+        $ret .= '<a href="javascript:void(0)" class="glgallery-main-img">';
         $ret .= '<img class="media" src="'.ml($img['id']).'" '.$iatt.' />';
         $ret .= '</a>';
         $ret .= '<div class="glgallery-row">';

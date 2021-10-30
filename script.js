@@ -51,7 +51,7 @@
             var main_img = gallery.querySelector('.glgallery-main-img img'),
                 main_link = gallery.querySelector('.glgallery-main-img');
 
-            gallery.querySelectorAll('.glgallery-row-img').forEach(function(imgwrapper){
+            gallery.querySelectorAll('.glgallery-row-img').forEach(function(imgwrapper, idx){
                 var link = imgwrapper.querySelector('a'),
                     href = link.getAttribute('href');
                     times_clickes = 0;
@@ -70,6 +70,8 @@
                         e.preventDefault();            
                     };           
                 },true);
+                // Hover over first link to set main link
+                if (idx === 0) imgwrapper.dispatchEvent(new Event('mouseover'));
             });
         });
 

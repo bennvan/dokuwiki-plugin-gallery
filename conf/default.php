@@ -7,8 +7,8 @@
 
 $conf['thumbnail_width']  = 80;
 $conf['thumbnail_height'] = 80;
-$conf['image_width']      = 1080;
-$conf['image_height']     = 720;
+$conf['image_width']      = 0;
+$conf['image_height']     = 0;
 $conf['cols']             = 5;
 $conf['sort'] = 'file';
 $conf['options'] = 'cache,direct';

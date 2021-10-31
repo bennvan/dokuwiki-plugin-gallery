@@ -51,24 +51,31 @@
             var main_img = gallery.querySelector('.glgallery-main-img img'),
                 main_link = gallery.querySelector('.glgallery-main-img');
 
+            // When mouse leave the row on desktop, revent main img back to active
+            gallery.querySelectorAll('.glgallery-row').forEach(function(img_row) {
+                img_row.addEventListener('mouseleave', function(e) {
+                    gallery.querySelector('.glgallery-row-img-active').dispatchEvent(new Event('mouseover'));
+                })
+            });
+
             gallery.querySelectorAll('.glgallery-row-img').forEach(function(imgwrapper, idx){
                 var link = imgwrapper.querySelector('a'),
                     href = link.getAttribute('href');
-                    times_clickes = 0;
 
+                // mouseover event changes main image
                 imgwrapper.addEventListener('mouseover', function(e) {
-                    gallery.querySelector('.glgallery-row-img-active').classList.remove('glgallery-row-img-active');                 
-                    this.className += ' glgallery-row-img-active';
                     main_img.setAttribute('src', href);
                     main_link.onclick = function(e) { e.preventDefault(); link.click()};
                 });
                 // Only open lightbox on active item
-                imgwrapper.addEventListener('touchstart', function(e) {
+                imgwrapper.addEventListener('click', function(e) {
+                    // If first click, make active and prevent default click
                     if (!this.classList.contains('glgallery-row-img-active')) {
-                        this.dispatchEvent(new Event('mouseover'));         
                         e.stopPropagation();
-                        e.preventDefault();            
-                    };           
+                        if (e.cancelable) e.preventDefault();
+                        gallery.querySelector('.glgallery-row-img-active').classList.remove('glgallery-row-img-active');                 
+                        this.className += ' glgallery-row-img-active';
+                    }          
                 },true);
                 // Hover over first link to set main link
                 if (idx === 0) imgwrapper.dispatchEvent(new Event('mouseover'));

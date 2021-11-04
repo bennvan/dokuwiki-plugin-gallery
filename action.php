@@ -19,6 +19,7 @@ class action_plugin_gallery extends DokuWiki_Action_Plugin {
      */
     public function register(Doku_Event_Handler $controller) {
        $controller->register_hook('DOKUWIKI_STARTED', 'AFTER', $this, '_galleryJSINFO');
+       $controller->register_hook('PLUGIN_MOVE_HANDLERS_REGISTER', 'BEFORE', $this, 'handle_move_register');
     }
 
     /**
@@ -33,6 +34,18 @@ class action_plugin_gallery extends DokuWiki_Action_Plugin {
                 'jsviewerall'  => $this->getConf('jsViewerAll'),
                 'jsviewer'     => $this->getConf('jsViewer'),
         );
+    }
+
+    public function handle_move_register(Doku_Event $event, $params) {
+        $event->data['handlers']['gallery'] = array($this, 'rewrite_gallery_img');
+    }
+
+    public function rewrite_gallery_img($match, $state, $pos, $pluginname, helper_plugin_move_handler $handler) {
+        // Only want to rewrite explicit defined images
+        if ($state !== DOKU_LEXER_MATCHED) {
+            return $match;
+        }
+        $handler->media($match, $state, $pos);
     }
 
 }

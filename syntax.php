@@ -16,6 +16,8 @@ require_once(DOKU_INC.'inc/JpegMeta.php');
 
 class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
 
+    private $imgdata = [];
+
     /**
      * What kind of syntax are we?
      */
@@ -42,7 +44,15 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
      * Connect pattern to lexer
      */
     function connectTo($mode) {
+        $this->Lexer->addEntryPattern('<gallery.*?>(?=.*?</gallery>)', $mode, 'plugin_gallery');
         $this->Lexer->addSpecialPattern('\{\{gallery>[^}]*\}\}',$mode,'plugin_gallery');
+
+    }
+
+    public function postConnect()
+    {
+        $this->Lexer->addExitPattern('</gallery>', 'plugin_gallery');
+        $this->Lexer->addPattern('\{\{(?:[^\}]|(?:\}[^\}]))+\}\}', 'plugin_gallery');
     }
 
     /**
@@ -50,26 +60,56 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
      */
     function handle($match, $state, $pos, Doku_Handler $handler){
         global $ID;
-        $match = substr($match,10,-2); //strip markup from start and end
 
-        $data = array();
+        if ($state == DOKU_LEXER_SPECIAL) {
+            $match = substr($match,10,-2); //strip markup from start and end
+            $data = array();
+            $data['galid'] = substr(md5(uniqid()),0,4);
 
-        $data['galid'] = substr(md5($match),0,4);
+            // alignment
+            $data['align'] = 0;
+            if(substr($match,0,1) == ' ') $data['align'] += 1;
+            if(substr($match,-1,1) == ' ') $data['align'] += 2;
 
-        // alignment
-        $data['align'] = 0;
-        if(substr($match,0,1) == ' ') $data['align'] += 1;
-        if(substr($match,-1,1) == ' ') $data['align'] += 2;
+            // extract params
+            list($ns,$params) = explode('?',$match,2);
+            $ns = trim($ns);
 
-        // extract params
-        list($ns,$params) = explode('?',$match,2);
-        $ns = trim($ns);
+            // namespace (including resolving relatives)
+            if(!preg_match('/^https?:\/\//i',$ns)){
+                $data['ns'] = resolve_id(getNS($ID),$ns);
+            }else{
+                $data['ns'] =  $ns;
+            }
+        };
+        if ($state == DOKU_LEXER_ENTER) {
+            // Explicit defined images 
+            $match = substr($match,8,-1); //strip markup from start and end
+            $data['galid'] = substr(md5(uniqid()),0,4);
+            $params = explode(' ', trim($match));
 
-        // namespace (including resolving relatives)
-        if(!preg_match('/^https?:\/\//i',$ns)){
-            $data['ns'] = resolve_id(getNS($ID),$ns);
-        }else{
-            $data['ns'] =  $ns;
+            // alignment
+            $data['align'] = 0;
+            foreach($params as $param) {
+                if ($param === 'left') {$data['align'] = 1; continue;};
+                if ($param === 'right') {$data['align'] = 2; continue;};
+                if ($param === 'center') {$data['align'] = 3; continue;};
+            }
+        }
+        if ($state == DOKU_LEXER_MATCHED) {
+            // An explicit image matched
+            $match = substr($match,2,-2); //strip markup from start and end
+            list($img, $_) = explode('?',$match,2); // We take no params, just image path;
+            // Add it to the image array
+            if(!preg_match('/^https?:\/\//i',$img)){
+                $this->$imgdata['explicit'][] = resolve_id(getNS($ID),$img);
+            }else{
+                $this->$imgdata['explicit'][] =  $img;
+            }
+            return array($state, '');
+        }
+        if ($state == DOKU_LEXER_EXIT) {
+            return array($state, $this->$imgdata);
         }
 
         // set the defaults
@@ -138,8 +178,13 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         // implicit direct linking?
         if($data['jsviewer'] !== 'none') $data['direct'] = true;
 
+        if ($state == DOKU_LEXER_ENTER){
+            // Save imgdata for later
+            $this->$imgdata = $data;
+            return array($state, '');
+        }
 
-        return $data;
+        return array($state, $data);
     }
 
     /**
@@ -147,11 +192,18 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
      */
     function render($mode, Doku_Renderer $R, $data){
         global $ID;
+
+        list($state, $data) = $data;
+        if ($state !== DOKU_LEXER_EXIT && $state !== DOKU_LEXER_SPECIAL) {
+            return true;
+        }
+
         if($mode == 'xhtml'){
             $R->info['cache'] &= $data['cache'];
             $R->doc .= $this->_glgallery($data);
             return true;
-        }elseif($mode == 'metadata'){
+        }
+        if($mode == 'metadata'){
             $files = $this->_findimages($data);
             if (count($files)) {
                 foreach($files as $img) {
@@ -233,6 +285,33 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         global $conf;
         $files = array();
 
+        // First check if we have class array prepared and use that
+        if (count($data['explicit'])){
+            require_once(DOKU_INC.'inc/JpegMeta.php');
+            foreach($data['explicit'] as $img) {
+                if (media_isexternal($img)){
+                    $files[] = array(
+                        'id'    => $img,
+                        'isimg' => preg_match('/\.(jpe?g|gif|png)$/',$img)
+                    );
+                    continue;
+                }
+                // Internal mediafile
+                $dir = utf8_encodeFN(str_replace(':','/',$img));
+                $files[] = array(
+                    'id'    => $img,
+                    'isimg' => preg_match('/\.(jpe?g|gif|png)$/',$dir),
+                    'file'  => basename($dir),
+                    'mtime' => filemtime($conf['mediadir'].'/'.$dir),
+                    'meta'  => new JpegMeta($conf['mediadir'].'/'.$dir)
+                );
+            }
+            $data['_single'] = false;
+            return $files;
+        }
+
+
+        // Special pattern was used. Find images based on NS or RSS
         // http URLs are supposed to be media RSS feeds
         if(preg_match('/^https?:\/\//i',$data['ns'])){
             $files = $this->_loadRSS($data['ns']);
@@ -264,7 +343,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         // done, yet?
         $len = count($files);
         if(!$len) return $files;
-        if($data['single']) return $files;
+        if($data['_single']) return $files;
 
         // filter images
         for($i=0; $i<$len; $i++){

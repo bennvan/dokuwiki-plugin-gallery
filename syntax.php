@@ -286,7 +286,8 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         $files = array();
 
         // First check if we have class array prepared and use that
-        if (count($data['explicit'])){
+        if (is_array($data['explicit'])){
+            if (!count($data['explicit'])) return $files;
             require_once(DOKU_INC.'inc/JpegMeta.php');
             foreach($data['explicit'] as $img) {
                 if (media_isexternal($img)){

@@ -24,14 +24,23 @@
             link.classList.add('glightbox','glightbox'+i);
             // Dont show the image path as the title/description.
             link.setAttribute('data-glightbox', 'title:; description:;');
-            // if its a caption.
-            next = link.nextElementSibling;
-            if (!next) continue;
-            if (next.tagName === 'FIGCAPTION') {
-                var figcap = 'glightbox-figcap-'+i;
-                next.classList.add(figcap);
-                link.setAttribute("data-glightbox", "title: ;description: "+"."+figcap);
-            }
+
+            // Try to obtain a nearby caption if wrapped in parent figure tag.
+            parent = link.offsetParent;
+
+            // See if offset parent is a figure
+            if (parent.tagName !== 'FIGURE') {
+                continue;
+            } 
+            caption = parent.getElementsByTagName('figcaption');
+
+            // Ensure no more than one caption
+            if (caption.length != 1) continue;
+
+            var figcap = 'glightbox-figcap-'+i;
+            caption[0].classList.add(figcap);
+            link.setAttribute("data-glightbox", "title: ;description: "+"."+figcap);
+
         }
     }
     function init_glightbox() {

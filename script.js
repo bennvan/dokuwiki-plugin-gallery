@@ -28,10 +28,16 @@
             // Try to obtain a nearby caption if wrapped in parent figure tag.
             parent = link.offsetParent;
 
+            // See if parent exists
+            if (parent == null) {
+                continue;
+            }
+
             // See if offset parent is a figure
             if (parent.tagName !== 'FIGURE') {
                 continue;
             } 
+
             caption = parent.getElementsByTagName('figcaption');
 
             // Ensure no more than one caption

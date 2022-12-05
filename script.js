@@ -26,7 +26,7 @@
             link.setAttribute('data-glightbox', 'title:; description:;');
 
             // Try to obtain a nearby caption if wrapped in parent figure tag.
-            parent = link.offsetParent;
+            parent = link.parentElement;
 
             // See if parent exists
             if (parent == null) {
@@ -36,7 +36,7 @@
             // See if offset parent is a figure
             if (parent.tagName !== 'FIGURE') {
                 continue;
-            } 
+            }
 
             caption = parent.getElementsByTagName('figcaption');
 
@@ -44,9 +44,15 @@
             if (caption.length != 1) continue;
 
             var figcap = 'glightbox-figcap-'+i;
-            caption[0].classList.add(figcap);
+            caption = caption[0];
+            caption.classList.add(figcap);
             link.setAttribute("data-glightbox", "title: ;description: "+"."+figcap);
 
+            // ToDo:Check if subfigure and get parent caption
+            // if (parent.classList.contains('plugin_latexcaption_subfigure')){
+            //     var maincap = parent.parentElement.getElementsByTagName('figcaption');
+            //     maincap = maincap[maincap.length -1];
+            // }
         }
     }
     function init_glightbox() {

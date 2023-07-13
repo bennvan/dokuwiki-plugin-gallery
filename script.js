@@ -16,10 +16,10 @@
         return false;
     }
     function select_all_images() {
-        var links = document.querySelectorAll('a[class=media][href]');
+        var links = document.querySelectorAll('.dw-content a.media[href]');
         // for loop to break if condition fails
         for (var i = 0; i < links.length; i++) {
-            link = links[i];    
+            link = links[i];   
             if (!hasValidImg(link)) continue;
             // Add the lightbox
             link.classList.add('glightbox', 'glightbox-unassigned');

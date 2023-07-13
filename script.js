@@ -4,8 +4,9 @@
 
 (function() {
     function hasValidImg(link){
-        var img = link.querySelector('img');
-        if (!img) return false;    
+        // uncomment if only links with image thumbnails should be displayed in lightbox.
+        // var img = link.querySelector('img');
+        // if (!img) return false;    
         var href = link.getAttribute('href');
         if (!href) return false;
         href = href.toLowerCase();
@@ -21,52 +22,58 @@
             link = links[i];    
             if (!hasValidImg(link)) continue;
             // Add the lightbox
-            link.classList.add('glightbox','glightbox'+i);
+            link.classList.add('glightbox', 'glightbox-unassigned');
             // Dont show the image path as the title/description.
             link.setAttribute('data-glightbox', 'title:; description:;');
-
-            // Try to obtain a nearby caption if wrapped in parent figure tag.
-            parent = link.parentElement;
-
-            // See if parent exists
-            if (parent == null) {
-                continue;
+            // if its a caption.
+            next = link.nextElementSibling;
+            if (!next) continue;
+            if (next.tagName === 'FIGCAPTION') {
+                var figcap = 'glightbox-figcap-'+i;
+                next.classList.add(figcap);
+                link.setAttribute("data-glightbox", "title: ;description: "+"."+figcap);
             }
-
-            // See if offset parent is a figure
-            if (parent.tagName !== 'FIGURE') {
-                continue;
-            }
-
-            caption = parent.getElementsByTagName('figcaption');
-
-            // Ensure no more than one caption
-            if (caption.length != 1) continue;
-
-            var figcap = 'glightbox-figcap-'+i;
-            caption = caption[0];
-            caption.classList.add(figcap);
-            link.setAttribute("data-glightbox", "title: ;description: "+"."+figcap);
-
-            // ToDo:Check if subfigure and get parent caption
-            // if (parent.classList.contains('plugin_latexcaption_subfigure')){
-            //     var maincap = parent.parentElement.getElementsByTagName('figcaption');
-            //     maincap = maincap[maincap.length -1];
-            // }
         }
     }
     function init_glightbox() {
-        const lightbox = GLightbox({
-            touchNavigation: true,
-            loop: true,
-            autoplayVideos: true
+        // Array for gallery 
+        var gallerybox = [];
+        // Array for figures
+        var figlightbox = [];
+        // Array containing stray images
+        var lightbox = [];
+        
+        // Group all figure images
+        document.querySelectorAll('.plugin_latexcaption_figure').forEach(function(figure, i) {
+            figure.querySelectorAll('a.glightbox').forEach(function(img) {
+                img.classList.add('fglid_'+i);
+                img.classList.remove('glightbox-unassigned');
+            });
+            figlightbox[i] = GLightbox({
+                selector: '.fglid_'+i,
+                moreLength: 100,
+                touchFollowAxis: false
+            })
         });
+
+        // Remaining stray images get own container
+        document.querySelectorAll('a.glightbox-unassigned').forEach(function(img,i) {
+            img.classList.add('glid_'+i);
+            img.classList.remove('glightbox-unassigned');
+            lightbox[i] = GLightbox({
+                selector: '.glid_'+i,
+                moreLength: 100,
+                touchFollowAxis: false
+            })
+        });
+
+        // Group all gallery images
         document.querySelectorAll('.glgallery[data-gallery]').forEach(function(gallery) {
             id = gallery.getAttribute('data-gallery');
-            lightbox[id] = GLightbox({
+            gallerybox[id] = GLightbox({
                 selector: '.glightbox_'+id,
-                touchNavigation: true,
-                autoplayVideos: true
+                moreLength: 100,
+                touchFollowAxis: false
             });
 
             var main_img = gallery.querySelector('.glgallery-main-img img'),
@@ -82,7 +89,7 @@
             gallery.querySelectorAll('.glgallery-row-img').forEach(function(imgwrapper, idx){
                 var link = imgwrapper.querySelector('a'),
                     href = link.getAttribute('href');
-
+                    link.classList.remove('glightbox-unassigned');
                 // mouseover event changes main image
                 imgwrapper.addEventListener('mouseover', function(e) {
                     main_img.setAttribute('src', href);

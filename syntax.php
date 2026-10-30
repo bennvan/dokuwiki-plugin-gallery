@@ -61,6 +61,11 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
     function handle($match, $state, $pos, Doku_Handler $handler){
         global $ID;
 
+        // Whitespace and other text inside an explicit gallery carry no options.
+        if ($state == DOKU_LEXER_UNMATCHED) {
+            return array($state, '');
+        }
+
         if ($state == DOKU_LEXER_SPECIAL) {
             $match = substr($match,10,-2); //strip markup from start and end
             $data = array();
@@ -72,7 +77,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
             if(substr($match,-1,1) == ' ') $data['align'] += 2;
 
             // extract params
-            list($ns,$params) = explode('?',$match,2);
+            list($ns,$params) = array_pad(explode('?',$match,2), 2, '');
             $ns = trim($ns);
 
             // namespace (including resolving relatives)
@@ -86,11 +91,12 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
             // Explicit defined images 
             $match = substr($match,8,-1); //strip markup from start and end
             $data['galid'] = substr(md5(uniqid()),0,4);
-            $params = explode(' ', trim($match));
+            $params = trim($match);
+            $data['explicit'] = array();
 
             // alignment
             $data['align'] = 0;
-            foreach($params as $param) {
+            foreach(preg_split('/\s+/', $params, -1, PREG_SPLIT_NO_EMPTY) as $param) {
                 if ($param === 'left') {$data['align'] = 1; continue;};
                 if ($param === 'right') {$data['align'] = 2; continue;};
                 if ($param === 'center') {$data['align'] = 3; continue;};
@@ -98,18 +104,22 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         }
         if ($state == DOKU_LEXER_MATCHED) {
             // An explicit image matched
-            $match = substr($match,2,-2); //strip markup from start and end
-            list($img, $_) = explode('?',$match,2); // We take no params, just image path;
+            $media = class_exists(\dokuwiki\Parsing\ParserMode\Media::class)
+                ? \dokuwiki\Parsing\ParserMode\Media::parseMedia($match)
+                : Doku_Handler_Parse_Media($match);
+            $img = $media['src']; // Only the source belongs in the explicit image list.
             // Add it to the image array
             if(!preg_match('/^https?:\/\//i',$img)){
-                $this->$imgdata['explicit'][] = resolve_id(getNS($ID),$img);
+                $this->imgdata['explicit'][] = resolve_id(getNS($ID),$img);
             }else{
-                $this->$imgdata['explicit'][] =  $img;
+                $this->imgdata['explicit'][] =  $img;
             }
             return array($state, '');
         }
         if ($state == DOKU_LEXER_EXIT) {
-            return array($state, $this->$imgdata);
+            $data = $this->imgdata;
+            $this->imgdata = array();
+            return array($state, $data);
         }
 
         // set the defaults
@@ -135,9 +145,11 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         $data['paginate']    = 0;
 
         // parse additional options
-        $params = $this->getConf('options').','.$params;
+        $defaults = $this->getConf('options');
+        if (is_array($defaults)) $defaults = implode(',', $defaults);
+        $params = $defaults.','.$params;
         $params = preg_replace('/[,&\?]+/',' ',$params);
-        $params = explode(' ',$params);
+        $params = preg_split('/\s+/', trim($params), -1, PREG_SPLIT_NO_EMPTY);
         foreach($params as $param){
             if($param === '') continue;
             if($param == 'titlesort'){
@@ -180,7 +192,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
 
         if ($state == DOKU_LEXER_ENTER){
             // Save imgdata for later
-            $this->$imgdata = $data;
+            $this->imgdata = $data;
             return array($state, '');
         }
 
@@ -286,7 +298,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
         $files = array();
 
         // First check if we have class array prepared and use that
-        if (is_array($data['explicit'])){
+        if (isset($data['explicit']) && is_array($data['explicit'])){
             if (!count($data['explicit'])) return $files;
             require_once(DOKU_INC.'inc/JpegMeta.php');
             foreach($data['explicit'] as $img) {
@@ -299,6 +311,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
                 }
                 // Internal mediafile
                 $dir = utf8_encodeFN(str_replace(':','/',$img));
+                if (!is_file($conf['mediadir'].'/'.$dir)) continue;
                 $files[] = array(
                     'id'    => $img,
                     'isimg' => preg_match('/\.(jpe?g|gif|png)$/',$dir),
@@ -442,7 +455,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
 
         $ret .= '<div class="glgallery '.$align.'" data-gallery="'.$data['galid'].'">';
         $ret .= '<a href="javascript:void(0)" class="glgallery-main-img">';
-        $ret .= '<img class="media" src="'.ml($img['id']).'" '.$iatt.' />';
+        $ret .= '<img class="media" src="'.ml($img['id']).'" alt="'.hsc($this->_meta($img, 'title')).'" />';
         $ret .= '</a>';
         $ret .= '<div class="glgallery-row">';
 
@@ -673,7 +686,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
             $href   = ml($img['id'],$dim_lightbox);
             $a['class'] = 'glightbox_'.$data['galid'];
             $a['data-gallery']  =  $data['galid']; //unique ID from the gallery
-        }elseif($img['detail'] && !$data['direct']){
+        }elseif(!empty($img['detail']) && !$data['direct']){
             $href   = $img['detail'];
         }else{
             $href   = ml($img['id'],array('id'=>$ID),$data['direct']);
@@ -746,7 +759,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
             $href   = ml($img['id'],$dim_lightbox);
             $a['class'] = "lightbox JSnocheck";
             $a['rel']   = 'lightbox[gal-'.substr(md5($ID),4).']'; //unique ID for the gallery
-        }elseif($img['detail'] && !$data['direct']){
+        }elseif(!empty($img['detail']) && !$data['direct']){
             $href   = $img['detail'];
         }else{
             $href   = ml($img['id'],array('id'=>$ID),$data['direct']);
@@ -807,7 +820,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
      * supplied in array
      */
     function _meta(&$img,$opt){
-        if($img['meta']){
+        if(!empty($img['meta'])){
             // map JPEGMeta calls to opt names
 
             switch($opt){
@@ -829,7 +842,7 @@ class syntax_plugin_gallery extends DokuWiki_Syntax_Plugin {
 
         }else{
             // just return the array field
-            return $img[$opt];
+            return $img[$opt] ?? '';
         }
     }
 

@@ -14,3 +14,4 @@ $conf['sort'] = 'file';
 $conf['options'] = 'cache,direct';
 $conf['jsViewer'] = 'glightbox';
 $conf['jsViewerAll'] = 1;
+$conf['defaultDirect'] = 1;

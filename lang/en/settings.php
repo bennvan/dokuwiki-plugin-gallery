@@ -21,3 +21,4 @@ $lang['sort_o_title'] = 'sort by EXIF title';
 $lang['options'] = 'Additional gallery default options';
 $lang['jsViewer'] = 'JS library/viewer to display images';
 $lang['jsViewerAll'] = 'Use selected <code>jsViewer</code> for all wiki images with a direct link';
+$lang['defaultDirect'] = 'Link wiki images directly to the original file by default. Explicit detail, direct, nolink and linkonly options are preserved.';

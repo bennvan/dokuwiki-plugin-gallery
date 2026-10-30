@@ -14,3 +14,4 @@ $meta['sort']    = array('multichoice', '_choices' => array('file','mod','date',
 $meta['options'] = array('multicheckbox', '_choices' => array('cache','crop','direct','random','reverse','showname','showtitle'));
 $meta['jsViewer'] = array('multichoice', '_choices' => array('none','lightbox','glightbox'));
 $meta['jsViewerAll'] = array('onoff');
+$meta['defaultDirect'] = array('onoff');

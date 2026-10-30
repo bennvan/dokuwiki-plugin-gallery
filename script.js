@@ -3,30 +3,56 @@
 
 
 (function() {
-    function hasValidImg(link){
-        // uncomment if only links with image thumbnails should be displayed in lightbox.
-        // var img = link.querySelector('img');
-        // if (!img) return false;    
+    function mediaSource(link) {
+        var url = new URL(link.href, document.baseURI);
+        return url.searchParams.get('media') || url.pathname;
+    }
+
+    function isPdfLink(link) {
+        if (link.classList.contains('mf_pdf')) return true;
+        return /\.pdf$/i.test(mediaSource(link));
+    }
+
+    function createLightbox(options) {
+        var lightbox = GLightbox(options);
+        lightbox.on('slide_before_load', function(slide) {
+            if (slide.trigger && isPdfLink(slide.trigger)) {
+                slide.slideNode.classList.add('gallery-pdf');
+            }
+        });
+        return lightbox;
+    }
+
+    function hasPreviewableMedia(link){
+        if (link.hasAttribute('download')) return false;
         var href = link.getAttribute('href');
         if (!href) return false;
         href = href.toLowerCase();
-        // its either _media or fetchphp
-        if (href.startsWith(JSINFO.plugin_gallery.mediapaths[0])) return true;
-        if (href.startsWith(JSINFO.plugin_gallery.mediapaths[1])) return true;
-        return false;
+        // Only direct DokuWiki media links are eligible for the viewer.
+        if (!href.startsWith(JSINFO.plugin_gallery.mediapaths[0]) &&
+            !href.startsWith(JSINFO.plugin_gallery.mediapaths[1])) return false;
+        // A download response never supplies an iframe document for GLightbox.
+        // Keep CAD files, archives and other unsupported formats as normal links.
+        return isPdfLink(link) || /\.(jpe?g|jpe|gif|png|apn|webp|avif|svg|mp4|ogg|webm|mov)$/i.test(mediaSource(link));
     }
     function select_all_images() {
         var links = document.querySelectorAll('.dw-content a.media[href]');
         // for loop to break if condition fails
         for (var i = 0; i < links.length; i++) {
-            link = links[i];   
-            if (!hasValidImg(link)) continue;
+            var link = links[i];
+            if (!hasPreviewableMedia(link)) continue;
             // Add the lightbox
             link.classList.add('glightbox', 'glightbox-unassigned');
             // Dont show the image path as the title/description.
             link.setAttribute('data-glightbox', 'title:; description:;');
+            if (isPdfLink(link)) {
+                // Explicit type also prevents PDF #page= links becoming inline slides.
+                link.setAttribute('data-type', 'external');
+                link.setAttribute('data-width', 'calc(100vw - 16px)');
+                link.setAttribute('data-height', 'calc(100vh - 64px)');
+            }
             // if its a caption.
-            next = link.nextElementSibling;
+            var next = link.nextElementSibling;
             if (!next) continue;
             if (next.tagName === 'FIGCAPTION') {
                 var figcap = 'glightbox-figcap-'+i;
@@ -49,7 +75,7 @@
                 img.classList.add('fglid_'+i);
                 img.classList.remove('glightbox-unassigned');
             });
-            figlightbox[i] = GLightbox({
+            figlightbox[i] = createLightbox({
                 selector: '.fglid_'+i,
                 moreLength: 100,
                 touchFollowAxis: false
@@ -60,7 +86,7 @@
         document.querySelectorAll('a.glightbox-unassigned').forEach(function(img,i) {
             img.classList.add('glid_'+i);
             img.classList.remove('glightbox-unassigned');
-            lightbox[i] = GLightbox({
+            lightbox[i] = createLightbox({
                 selector: '.glid_'+i,
                 moreLength: 100,
                 touchFollowAxis: false
@@ -70,7 +96,7 @@
         // Group all gallery images
         document.querySelectorAll('.glgallery[data-gallery]').forEach(function(gallery) {
             id = gallery.getAttribute('data-gallery');
-            gallerybox[id] = GLightbox({
+            gallerybox[id] = createLightbox({
                 selector: '.glightbox_'+id,
                 moreLength: 100,
                 touchFollowAxis: false

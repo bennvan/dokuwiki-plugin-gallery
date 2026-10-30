@@ -38,6 +38,27 @@
     background: #fff;
 }
 
+// Give document viewers the viewport, with room above for the close button.
+.glightbox-container .gallery-pdf .ginner-container {
+    width: calc(100vw - 16px);
+    height: auto;
+    margin: 56px auto 8px;
+}
+.gallery-pdf .gslide-inner-content {
+    display: flex;
+    flex-direction: column;
+}
+.gallery-pdf .gslide-external {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+}
+.gallery-pdf .gslide-description {
+    flex: 0 0 auto;
+    max-height: 20vh;
+    overflow: auto;
+}
+
 @media(max-width:576px) {
     .glgallery-center .glgallery-left, .glgallery-right {
         width: 100%;
